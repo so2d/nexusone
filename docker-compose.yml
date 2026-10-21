@@ -1,0 +1,106 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Database Service
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:18-alpine
+    container_name: sonatype-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: admin123
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - sonatype-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Sonatype Nexus Repository Manager (Nexus 3)
+  # ---------------------------------------------------------------------------
+  nexus:
+    image: sonatype/nexus3:latest
+    container_name: sonatype-nexus
+    restart: unless-stopped
+    pull_policy: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Enable external PostgreSQL datastore
+      - NEXUS_DATASTORE_ENABLED=true
+      - NEXUS_DATASTORE_NEXUS_JDBCURL=jdbc:postgresql://postgres:5432/nexus
+      - NEXUS_DATASTORE_NEXUS_USERNAME=rmuser
+      - NEXUS_DATASTORE_NEXUS_PASSWORD=rmuser
+      - INSTALL4J_ADD_VM_PARAMS=-Xms2g -Xmx2g -XX:MaxDirectMemorySize=1g
+    volumes:
+      - nexus-data:/nexus-data
+      - ./license.lic:/nexus-data/etc/license.lic:ro
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    ports:
+      - "8081:8081"   # Nexus Web UI
+    networks:
+      - sonatype-net
+
+  # ---------------------------------------------------------------------------
+  # Sonatype IQ Server
+  # ---------------------------------------------------------------------------
+  iq-server:
+    image: sonatype/nexus-iq-server:latest
+    container_name: sonatype-iq-server
+    restart: unless-stopped
+    pull_policy: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - iq-data:/sonatype-work
+      - ./config.yml:/opt/sonatype/nexus-iq-server/config.yml:ro
+    ports:
+      - "8070:8070"   # IQ Web UI
+      - "8071:8071"   # Admin Port
+    networks:
+      - sonatype-net
+
+  # ---------------------------------------------------------------------------
+  # DbGate - Database Manager
+  # ---------------------------------------------------------------------------
+  dbgate:
+    image: dbgate/dbgate:latest
+    container_name: dbgate
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"   # DbGate Web UI
+    volumes:
+      - dbgate-data:/root/.dbgate
+    networks:
+      - sonatype-net
+
+# -----------------------------------------------------------------------------
+# Networks & Volumes
+# -----------------------------------------------------------------------------
+networks:
+  sonatype-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  nexus-data:
+  iq-data:
+  dbgate-data:
+
