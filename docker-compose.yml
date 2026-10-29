@@ -71,7 +71,7 @@ services:
         reservations:
           memory: 2G
     ports:
-      - "8081:8081"   # Nexus Web UI
+      - "9081:8081"   # Nexus Web UI
     networks:
       - sonatype-net
 
@@ -93,8 +93,8 @@ services:
       - iq-data:/sonatype-work
       - ./config.yml:/opt/sonatype/nexus-iq-server/config.yml:ro
     ports:
-      - "8070:8070"   # IQ Web UI
-      - "8071:8071"   # Admin Port
+      - "9070:8070"   # IQ Web UI
+      - "9071:8071"   # Admin Port
     networks:
       - sonatype-net
 
@@ -111,4 +111,3 @@ volumes:
   nexus-data:
   iq-data:
   dbgate-data:
-
