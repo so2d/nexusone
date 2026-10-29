@@ -22,11 +22,32 @@ services:
       retries: 10
       start_period: 10s
 
+
+  # ---------------------------------------------------------------------------
+  # DbGate - Database Manager
+  # ---------------------------------------------------------------------------
+  dbgate:
+    image: dbgate/dbgate:latest
+    container_name: dbgate
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"   # DbGate Web UI
+    volumes:
+      - dbgate-data:/root/.dbgate
+    networks:
+      - sonatype-net
+
+
   # ---------------------------------------------------------------------------
   # Sonatype Nexus Repository Manager (Nexus 3)
+  #   docker compose --profile nexusone up -d
   # ---------------------------------------------------------------------------
   nexus:
     image: sonatype/nexus3:latest
+    profiles: ["nexusone"]
     container_name: sonatype-nexus
     restart: unless-stopped
     pull_policy: always
@@ -54,11 +75,14 @@ services:
     networks:
       - sonatype-net
 
+
   # ---------------------------------------------------------------------------
   # Sonatype IQ Server
+  #   docker compose --profile nexusone up -d
   # ---------------------------------------------------------------------------
   iq-server:
     image: sonatype/nexus-iq-server:latest
+    profiles: ["nexusone"]
     container_name: sonatype-iq-server
     restart: unless-stopped
     pull_policy: always
@@ -74,22 +98,6 @@ services:
     networks:
       - sonatype-net
 
-  # ---------------------------------------------------------------------------
-  # DbGate - Database Manager
-  # ---------------------------------------------------------------------------
-  dbgate:
-    image: dbgate/dbgate:latest
-    container_name: dbgate
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "3000:3000"   # DbGate Web UI
-    volumes:
-      - dbgate-data:/root/.dbgate
-    networks:
-      - sonatype-net
 
 # -----------------------------------------------------------------------------
 # Networks & Volumes
